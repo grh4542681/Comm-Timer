@@ -1,1 +1,1 @@
-# comm-timer
+# xg-timer
