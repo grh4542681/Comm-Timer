@@ -1,9 +1,9 @@
-#ifndef __TIMER_LOG_SERVRITY_H__
-#define __TIMER_LOG_SERVRITY_H__
+#ifndef __LOG_PRIORITY_H__
+#define __LOG_PRIORITY_H__
 
-namespace ::comm::timer {
+namespace xg::timer::log {
 
-enum class LogServrity : int {
+enum class Priority : int {
     Emergency = 0,
     Alert,
     Critical,

@@ -9,15 +9,13 @@
 #include <ctime>
 #include <iomanip>
 
-#include "object.h"
-
 #include "log_priority.h"
 #include "log_format.h"
 #include "log_interface.h"
 
 namespace xg::timer::log {
 
-class Wapper: virtual public base::Object {
+class Wapper {
 public:
     Wapper() : log_interface_(std::nullptr) { }
     virtual ~Wapper() { }
@@ -65,7 +63,7 @@ public:
             _build_message(log_stream, std::forward<Args>(args)...);
             _write(log_stream.str());
         } else {
-            
+            log_interface_->wirte(std::move(priority), std::forward<Args>(args)...);
         }
     }
 
