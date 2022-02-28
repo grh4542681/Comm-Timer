@@ -18,9 +18,9 @@ set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_COMPILE_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_COMPILE_FLAGS}")
 
 #project arguments
-set(COMM_LIBS_PROJ_TOP $ENV{REPOTOP})
+set(XG_TIMER_PROJ_TOP $ENV{XGTIMER_REPOTOP})
 if(NOT OUT)
-    set(OUT "${COMM_LIBS_PROJ_TOP}/install")
+    set(OUT "${XG_TIMER_PROJ_TOP}/install")
 endif()
 set(CMAKE_INSTALL_PREFIX ${OUT})
 
@@ -29,6 +29,7 @@ option(BUILD_DEMO "Build test program" ON)
 
 add_subdirectory(lib)
 add_subdirectory(src)
+add_subdirectory(test)
 
 #test
 if(BUILD_DEMO)

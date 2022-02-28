@@ -1,5 +1,5 @@
-#ifndef __LOG_INTERFACE_H__
-#define __LOG_INTERFACE_H__
+#ifndef __LOG_WAPPER_H__
+#define __LOG_WAPPER_H__
 
 #include <map>
 #include <utility>
@@ -9,6 +9,7 @@
 #include <ctime>
 #include <iomanip>
 
+#include "log_facility.h"
 #include "log_priority.h"
 #include "log_format.h"
 #include "log_interface.h"
@@ -17,7 +18,7 @@ namespace xg::timer::log {
 
 class Wapper {
 public:
-    Wapper() : log_interface_(std::nullptr) { }
+    Wapper() : log_interface_(nullptr) { }
     virtual ~Wapper() { }
 
     static Wapper& Instance() {
@@ -25,51 +26,54 @@ public:
         return instance;
     }
 
-    template <typename ... Args> void Emergency(Args&& ... args) {
-        Log(Priority::Emergency, std::forward<Args>(args)...);
+    template <typename ... Args> void Emergency(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Emergency, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Alert(Args&& ... args) {
-        Log(Priority::Alert, std::forward<Args>(args)...);
+    template <typename ... Args> void Alert(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Alert, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Critical(Args&& ... args) {
-        Log(Priority::Critical, std::forward<Args>(args)...);
+    template <typename ... Args> void Critical(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Critical, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Error(Args&& ... args) {
-        Log(Priority::Error, std::forward<Args>(args)...);
+    template <typename ... Args> void Error(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Error, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Warning(Args&& ... args) {
-        Log(Priority::Warning, std::forward<Args>(args)...);
+    template <typename ... Args> void Warning(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Warning, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Notice(Args&& ... args) {
-        Log(Priority::Notice, std::forward<Args>(args)...);
+    template <typename ... Args> void Notice(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Notice, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Info(Args&& ... args) {
-        Log(Priority::Info, std::forward<Args>(args)...);
+    template <typename ... Args> void Info(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Info, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Debug(Args&& ... args) {
-        Log(Priority::Debug, std::forward<Args>(args)...);
+    template <typename ... Args> void Debug(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Debug, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Debug2(Args&& ... args) {
-        Log(Priority::Debug2, std::forward<Args>(args)...);
+    template <typename ... Args> void Debug2(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Debug2, std::forward<Args>(args)...);
     }
-    template <typename ... Args> void Debug3(Args&& ... args) {
-        Log(Priority::Debug3, std::forward<Args>(args)...);
+    template <typename ... Args> void Debug3(Facility&& facility, Args&& ... args) {
+        Log(std::move(facility), Priority::Debug3, std::forward<Args>(args)...);
     }
 
-    template <typename ... Args> void Log(Priority&& priority, Args&& ... args) {
-        if (log_interface_ == std::nullptr) {
-            std::stringstream log_stream;
-            _build_header(log_stream, std::move(priority));
+    template <typename ... Args> void Log(Facility&& facility, Priority&& priority, Args&& ... args) {
+        std::stringstream log_stream;
+        if (log_interface_ == nullptr) {
+            _build_header(log_stream, std::move(facility), std::move(priority));
             _build_message(log_stream, std::forward<Args>(args)...);
             _write(log_stream.str());
         } else {
-            log_interface_->wirte(std::move(priority), std::forward<Args>(args)...);
+            _build_message(log_stream, std::forward<Args>(args)...);
+            log_interface_->write(std::move(facility), std::move(priority), log_stream.str());
         }
     }
 
 protected:
+    void _build_facility(std::stringstream& log_stream, Facility&& facility) {
+        log_stream << facility.GetName();
+    }
     void _build_priority(std::stringstream& log_stream, Priority&& priority) {
-        log_stream << app_name_;
         switch (priority) {
             case Priority::Emergency:
                 log_stream << "-EMERG";
@@ -106,7 +110,7 @@ protected:
                 break;
         }
     }
-    void _build_header(std::stringstream& log_stream, Priority&& priority) {
+    void _build_header(std::stringstream& log_stream, Facility&& facility, Priority&& priority) {
 
         auto timepoint = std::chrono::time_point_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now());
         std::time_t timestamp = std::chrono::system_clock::to_time_t(timepoint);
@@ -257,6 +261,7 @@ protected:
                 }
                 case Format::Field::Logschema:
                 {
+                    _build_facility(log_stream, std::move(facility));
                     _build_priority(log_stream, std::move(priority));
                     break;
                 }

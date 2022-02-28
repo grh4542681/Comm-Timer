@@ -1,0 +1,13 @@
+/.settings/
+.cproject
+.nfs*
+.project
+*.swp
+*.a
+*.so
+doc/*
+tmp/*
+*/build/*
+build/*
+*/install/*
+install/*

@@ -14,7 +14,7 @@
 namespace xg::timer::log {
 
 typedef struct __Interface {
-    void (*write) (Priority&& priority, Args&& ... args);
+    void (*write) (Facility&& facility, Priority&& priority, std::string&& message);
 } Interface;
 
 }

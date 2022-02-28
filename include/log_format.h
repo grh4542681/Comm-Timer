@@ -4,25 +4,25 @@
 #include <vector>
 #include <iterator>
 
-#define LOG_FORMAT_DEFAULT (infra::log::Format() << infra::log::Format::Field::LeftMidBrackets \
-                                            << infra::log::Format::Field::Year \
-                                            << infra::log::Format::Field::HorizontalLine \
-                                            << infra::log::Format::Field::Month \
-                                            << infra::log::Format::Field::HorizontalLine \
-                                            << infra::log::Format::Field::DayOfMonth \
-                                            << infra::log::Format::Field::Blank \
-                                            << infra::log::Format::Field::Hour \
-                                            << infra::log::Format::Field::Colon \
-                                            << infra::log::Format::Field::Minute \
-                                            << infra::log::Format::Field::Colon \
-                                            << infra::log::Format::Field::Second \
-                                            << infra::log::Format::Field::Dot \
-                                            << infra::log::Format::Field::Microsecond \
-                                            << infra::log::Format::Field::RightMidBrackets \
-                                            << infra::log::Format::Field::Blank \
-                                            << infra::log::Format::Field::Logschema \
-                                            << infra::log::Format::Field::Colon \
-                                            << infra::log::Format::Field::Blank)
+#define LOG_FORMAT_DEFAULT (::xg::timer::log::Format() << ::xg::timer::log::Format::Field::LeftMidBrackets \
+                                            << ::xg::timer::log::Format::Field::Year \
+                                            << ::xg::timer::log::Format::Field::HorizontalLine \
+                                            << ::xg::timer::log::Format::Field::Month \
+                                            << ::xg::timer::log::Format::Field::HorizontalLine \
+                                            << ::xg::timer::log::Format::Field::DayOfMonth \
+                                            << ::xg::timer::log::Format::Field::Blank \
+                                            << ::xg::timer::log::Format::Field::Hour \
+                                            << ::xg::timer::log::Format::Field::Colon \
+                                            << ::xg::timer::log::Format::Field::Minute \
+                                            << ::xg::timer::log::Format::Field::Colon \
+                                            << ::xg::timer::log::Format::Field::Second \
+                                            << ::xg::timer::log::Format::Field::Dot \
+                                            << ::xg::timer::log::Format::Field::Microsecond \
+                                            << ::xg::timer::log::Format::Field::RightMidBrackets \
+                                            << ::xg::timer::log::Format::Field::Blank \
+                                            << ::xg::timer::log::Format::Field::Logschema \
+                                            << ::xg::timer::log::Format::Field::Colon \
+                                            << ::xg::timer::log::Format::Field::Blank)
 
 namespace xg::timer::log {
 
