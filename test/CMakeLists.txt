@@ -1,5 +1,6 @@
 set(TEST_TARGETS)
-set(TEST_HRD "${XG_TIMER_PROJ_TOP}/include"
+set(TEST_HRD "${XG_TIMER_PROJ_TOP}/include/logger"
+             "${XG_TIMER_PROJ_TOP}/include"
              )
 set(TEST_LOG_SRC test_log.cc)
 add_executable(test_log ${TEST_LOG_SRC})
