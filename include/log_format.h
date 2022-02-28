@@ -26,6 +26,9 @@
 
 namespace xg::timer::log {
 
+/**
+* @brief - XG-timer logger format class
+*/
 class Format {
 public:
     enum class Field : int {

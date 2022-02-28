@@ -13,7 +13,17 @@
 
 namespace xg::timer::log {
 
+/**
+* @brief - XG-timer logger interface.
+*/
 typedef struct __Interface {
+    /**
+    * @brief - Function ptr for log write
+    *
+    * @param [facility] - log facility.
+    * @param [priority] - log priority.
+    * @param [message] - log message.
+    */
     void (*write) (Facility&& facility, Priority&& priority, std::string&& message);
 } Interface;
 

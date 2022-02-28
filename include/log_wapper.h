@@ -16,11 +16,18 @@
 
 namespace xg::timer::log {
 
+/**
+* @brief - Logger Wapper class. User can register a Interface
+*          Take over all log printing
+*/
 class Wapper {
-public:
-    Wapper() : log_interface_(nullptr) { }
-    virtual ~Wapper() { }
+private:
+    Wapper() {
+        log_interface_.write = nullptr;
+    }
+    ~Wapper() { }
 
+public:
     static Wapper& Instance() {
         static Wapper instance;
         return instance;
@@ -59,14 +66,23 @@ public:
 
     template <typename ... Args> void Log(Facility&& facility, Priority&& priority, Args&& ... args) {
         std::stringstream log_stream;
-        if (log_interface_ == nullptr) {
+        if (log_interface_.write == nullptr) {
             _build_header(log_stream, std::move(facility), std::move(priority));
             _build_message(log_stream, std::forward<Args>(args)...);
             _write(log_stream.str());
         } else {
             _build_message(log_stream, std::forward<Args>(args)...);
-            log_interface_->write(std::move(facility), std::move(priority), log_stream.str());
+            log_interface_.write(std::move(facility), std::move(priority), log_stream.str());
         }
+    }
+
+    /**
+    * @brief Register - register a logger interface to take over all logs.
+    *
+    * @param [interface] - logger interface.
+    */
+    void Register(Interface& interface) {
+        std::swap<Interface>(log_interface_, interface);
     }
 
 protected:
@@ -282,7 +298,6 @@ protected:
         std::cout << logstr << std::endl;
     }
 protected:
-    std::string app_name_ = "XGTimer";
     std::map<Priority, Format> rule_map_ = {
         {Priority::Emergency, LOG_FORMAT_DEFAULT},
         {Priority::Alert,     LOG_FORMAT_DEFAULT},
@@ -295,7 +310,7 @@ protected:
         {Priority::Debug2,    LOG_FORMAT_DEFAULT},
         {Priority::Debug3,    LOG_FORMAT_DEFAULT},
     };
-    Interface* log_interface_;
+    Interface log_interface_;
     Format format_default_ = LOG_FORMAT_DEFAULT;
 };
 

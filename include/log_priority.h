@@ -3,6 +3,9 @@
 
 namespace xg::timer::log {
 
+/**
+* @brief - XG-timer logger priority class
+*/
 enum class Priority : int {
     Emergency = 0,
     Alert,
