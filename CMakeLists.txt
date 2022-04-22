@@ -7,12 +7,12 @@ set(CMAKE "/home/ezgaoro/workspace/tools/cmake-3.17.3/bin/cmake")
 set(CMAKE_C_COMPILER "/home/ezgaoro/workspace/gcc-11.1.0/bin/gcc")
 set(CMAKE_CXX_COMPILER "/home/ezgaoro/workspace/gcc-11.1.0/bin/g++")
 
-set(COMPILE_WARNINGS "-Wall")
+set(COMPILE_WARNINGS "-W -Wall -Werror")
 set(COMPILE_OPTIMIZATION "-Wl,--as-needed -O2")
 set(COMPILE_DEBUG "-g -ggdb")
 
 set(C_COMPILE_FLAGS "")
-set(CXX_COMPILE_FLAGS "-std=c++20 -fPIC ${COMPILE_WARNINGS} ${COMPILE_OPTIMIZATION} ${COMPILE_DEBUG}")
+set(CXX_COMPILE_FLAGS "-std=c++20 -fPIC -fext-numeric-literals ${COMPILE_WARNINGS} ${COMPILE_OPTIMIZATION} ${COMPILE_DEBUG}")
 
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${C_COMPILE_FLAGS}")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${CXX_COMPILE_FLAGS}")
@@ -26,6 +26,8 @@ set(CMAKE_INSTALL_PREFIX ${OUT})
 
 option(BUILD_UT "Build unittest" ON)
 option(BUILD_DEMO "Build test program" ON)
+option(BUILD_SHARED_LIBS "Build shared library" ON)
+option(BUILD_STATIC_LIBS "Build static library" OFF)
 
 add_subdirectory(lib)
 add_subdirectory(src)

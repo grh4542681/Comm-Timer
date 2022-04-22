@@ -130,7 +130,8 @@ protected:
 
         auto timepoint = std::chrono::time_point_cast<std::chrono::nanoseconds>(std::chrono::system_clock::now());
         std::time_t timestamp = std::chrono::system_clock::to_time_t(timepoint);
-        std::tm* tm = std::localtime(&timestamp);
+        std::tm ttm;
+        std::tm* tm = localtime_r(&timestamp, &ttm);
 
         Format& format = format_default_;
         auto rule_map_it = rule_map_.find(priority);
