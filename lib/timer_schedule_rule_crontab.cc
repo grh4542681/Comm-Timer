@@ -203,7 +203,7 @@ std::tuple<Return, int> ScheduleRuleCrontab::YearRule::GetNextValue(int curr_val
 }
 
 
-//ScheduleRuleCrontab::Month
+//ScheduleRuleCrontab::MonthRule
 ScheduleRuleCrontab::MonthRule::MonthRule(ScheduleRule::RefTimePoint start_time, std::string rule)
         : ScheduleRuleCrontab::FieldRule(start_time, rule)
 {
