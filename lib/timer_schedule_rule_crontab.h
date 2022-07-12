@@ -36,6 +36,7 @@ public:
         bool _parsed;
         std::string _raw_rule;
         ScheduleRule::RefTimePoint _start_time;
+        ScheduleRule::RefTimePoint _last_time;
 
         int _last_value;
         std::map<RuleType, std::string> _rule_map;
@@ -53,11 +54,72 @@ public:
         std::tuple<Return, int> GetNextValue(int curr_value);
     };
 
-    class MonthRule : public FieldRule{
+    class MonthRule : public FieldRule {
     public:
         MonthRule(ScheduleRule::RefTimePoint start_time, std::string rule);
         MonthRule(MonthRule&& other);
         ~MonthRule();
+
+        std::tuple<Return, int> GetNextValue();
+        std::tuple<Return, int> GetNextValue(int curr_value);
+    private:
+        void valid_rule_();
+    };
+
+
+    class DayOfMonthRule : public FieldRule {
+    public:
+        DayOfMonthRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        DayOfMonthRule(DayOfMonthRule&& other);
+        ~DayOfMonthRule();
+
+        std::tuple<Return, int> GetNextValue();
+        std::tuple<Return, int> GetNextValue(int curr_value);
+    private:
+        void valid_rule_();
+    };
+
+    class DayOfWeekRule : public FieldRule {
+    public:
+        DayOfWeekRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        DayOfWeekRule(DayOfWeekRule&& other);
+        ~DayOfWeekRule();
+
+        std::tuple<Return, int> GetNextValue();
+        std::tuple<Return, int> GetNextValue(int curr_value);
+    private:
+        void valid_rule_();
+    };
+
+    class HourRule : public FieldRule {
+    public:
+        HourRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        HourRule(HourRule&& other);
+        ~MonthRule();
+
+        std::tuple<Return, int> GetNextValue();
+        std::tuple<Return, int> GetNextValue(int curr_value);
+    private:
+        void valid_rule_();
+    };
+
+    class MinuteRule : public FieldRule {
+    public:
+        MinuteRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        MinuteRule(MinuteRule&& other);
+        ~MinuteRule();
+
+        std::tuple<Return, int> GetNextValue();
+        std::tuple<Return, int> GetNextValue(int curr_value);
+    private:
+        void valid_rule_();
+    };
+
+    class SecondRule : public FieldRule {
+    public:
+        SecondRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        SecondRule(SecondRule&& other);
+        ~SecondRule();
 
         std::tuple<Return, int> GetNextValue();
         std::tuple<Return, int> GetNextValue(int curr_value);
