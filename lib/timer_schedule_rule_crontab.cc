@@ -403,6 +403,7 @@ void ScheduleRuleCrontab::MonthRule::valid_rule_()
     }
 }
 
+
 //ScheduleRuleCrontab
 ScheduleRuleCrontab::ScheduleRuleCrontab(std::string rule) : _parsed(false), _raw_rule(rule)
 {
