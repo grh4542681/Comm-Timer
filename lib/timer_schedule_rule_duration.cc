@@ -47,9 +47,9 @@ ScheduleRuleDuration::ScheduleRuleDuration(std::chrono::years&& year)
 
 ScheduleRuleDuration::~ScheduleRuleDuration() { }
 
-bool ScheduleRuleDuration::Vaild(WheelAccuracy& accuracy)
+bool ScheduleRuleDuration::Valid(WheelAccuracy& accuracy)
 {
-    if (!accuracy.Vaild()) {
+    if (!accuracy.Valid()) {
         return false;
     }
     if (_duration_nano < accuracy.GetAccuracy()) {
@@ -65,8 +65,8 @@ std::tuple<Return, WheelScale>
 ScheduleRuleDuration::GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& accuracy)
 {
     std::ignore = reftime;
-    if (!Vaild(accuracy)) {
-        return std::make_tuple(Return(Return::EBAD_SCHEDULE_RULE), WheelScale());
+    if (!Valid(accuracy)) {
+        return std::make_tuple(Return(Return::ESCHEDULE_RULE_INVALID), WheelScale());
     }
     return std::make_tuple(Return(Return::SUCCESS), WheelScale(_duration_nano.count() / accuracy.GetAccuracy().count()));
 }

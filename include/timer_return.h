@@ -69,7 +69,8 @@ public:
         EDEFAULE,
         EMODULE = ErrCodeBaseLine,
 
-        EBAD_SCHEDULE_RULE,
+        ESCHEDULE_RULE_INVALID,
+        ESCHEDULE_RULE_REACH_LIMIT,
     };
 public:
     Return(int ecode) : _ecode(ecode), _exception(Exception::Instance()) {
@@ -79,7 +80,8 @@ public:
                 { Return::ErrCode::ERROR, "Error" },
                 { Return::ErrCode::SUCCESS, "Success" },
 
-                { Return::ErrCode::EBAD_SCHEDULE_RULE, "Bad scheduling rule." },
+                { Return::ErrCode::ESCHEDULE_RULE_INVALID, "Bad scheduling rule." },
+                { Return::ErrCode::ESCHEDULE_RULE_REACH_LIMIT, "reach scheduling rule limit." },
             });
         }
     }

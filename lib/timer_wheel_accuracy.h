@@ -15,7 +15,7 @@ public:
         return instance;
     }
 
-    bool Vaild() {
+    bool Valid() {
         std::scoped_lock lock(_mutex);
         return (_accuracy.count() > 0);
     }

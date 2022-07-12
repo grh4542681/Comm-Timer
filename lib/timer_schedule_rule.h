@@ -31,13 +31,13 @@ public:
     virtual ~ScheduleRule() { }
 
     /**
-    * @brief Vaild - Whether the scheduling rules are correct under the given accuracy.
+    * @brief Valid - Whether the scheduling rules are correct under the given accuracy.
     *
     * @param [accuracy] - Timer wheel accuracy.
     *
     * @returns Bool 
     */
-    virtual bool Vaild(WheelAccuracy& accuracy) = 0;
+    virtual bool Valid(WheelAccuracy& accuracy) = 0;
 
     /**
     * @brief GetNextExprieScale - Based on the given time and accuracy,

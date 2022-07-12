@@ -34,16 +34,16 @@ public:
     ~ScheduleRuleDuration();
 
     /**
-    * @brief Vaild - Inherited function(ScheduleRule).
+    * @brief Valid - Inherited function(ScheduleRule).
     */
-    bool Vaild(WheelAccuracy& accuracy);
+    bool Valid(WheelAccuracy& accuracy);
     /**
-    * @brief Vaild - Inherited function(ScheduleRule).
+    * @brief Valid - Inherited function(ScheduleRule).
     */
     std::tuple<Return, WheelScale> GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& accuracy);
 
     /**
-    * @brief Vaild - Inherited function(ScheduleRule).
+    * @brief Valid - Inherited function(ScheduleRule).
     */
     RefTimePoint GetNextExprieTime(RefTimePoint&& reftime);
 
