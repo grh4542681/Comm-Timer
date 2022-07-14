@@ -17,10 +17,12 @@ ScheduleRuleCrontab::FieldRule::RegexTable = {
     {ScheduleRuleCrontab::FieldRule::RuleType::Value, std::regex("[0-9]+")},
 };
 
-ScheduleRuleCrontab::FieldRule::FieldRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : _parsed(false), _raw_rule(rule), _start_time(start_time), _last_time(start_time), _last_value(-1)
+ScheduleRuleCrontab::FieldRule::FieldRule(ScheduleRule::RefTimePoint start_time, std::string rule, int max, int min)
+        : _parsed(false), _raw_rule(rule), _start_time(start_time), _last_time(start_time), _last_value(-1),
+         _field_max_value(max), _field_min_value(min)
 {
-    parse_rule_();
+    ParseRule();
+    ValidRule();
 }
 ScheduleRuleCrontab::FieldRule::FieldRule(ScheduleRuleCrontab::FieldRule&& other)
 {
@@ -29,11 +31,18 @@ ScheduleRuleCrontab::FieldRule::FieldRule(ScheduleRuleCrontab::FieldRule&& other
     _start_time = other._start_time;
     _last_value = other._last_value;
     _rule_map = other._rule_map;
+    _field_max_value = other._field_max_value;
+    _field_min_value = other._field_min_value;
 }
 
 bool ScheduleRuleCrontab::FieldRule::Valid()
 {
     return _parsed;
+}
+
+void ScheduleRuleCrontab::FieldRule::SetLastTime(ScheduleRule::RefTimePoint last_time)
+{
+    _last_time = last_time;
 }
 
 void ScheduleRuleCrontab::FieldRule::Reset()
@@ -44,7 +53,7 @@ void ScheduleRuleCrontab::FieldRule::Print()
 {
 }
 
-void ScheduleRuleCrontab::FieldRule::parse_rule_()
+void ScheduleRuleCrontab::FieldRule::ParseRule()
 {
     if (!std::regex_match(_raw_rule, RegexTable[RuleType::SyntaxCheck])) {
         TIMER_RULE_ERROR("Parse Month rule[", _raw_rule, "] syntax error");
@@ -79,9 +88,216 @@ void ScheduleRuleCrontab::FieldRule::parse_rule_()
     _parsed = true;
 }
 
+void ScheduleRuleCrontab::FieldRule::ValidRule()
+{
+    if (!_parsed) return;
+    for (auto rule : _rule_map) {
+        switch (rule.first) {
+            case RuleType::Frequency:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (sm.size() != 2) {
+                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+            }
+            break;
+            case RuleType::Range:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (sm.size() != 3) {
+                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
+                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(1)) < _field_min_value || std::stoi(sm.str(1)) > _field_max_value) {
+                    TIMER_RULE_ERROR("Range start value [", std::stoi(sm.str(1)), "] invalid in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(2)) < _field_min_value || std::stoi(sm.str(2)) > _field_max_value) {
+                    TIMER_RULE_ERROR("Range end value [", std::stoi(sm.str(2)), "] invalid in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+            }
+            break;
+            case RuleType::FrequencyRange:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (sm.size() != 4) {
+                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
+                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(1)) < _field_min_value || std::stoi(sm.str(1)) > _field_max_value) {
+                    TIMER_RULE_ERROR("Range start value [", std::stoi(sm.str(1)), "] invalid in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(2)) < _field_min_value || std::stoi(sm.str(2)) > _field_max_value) {
+                    TIMER_RULE_ERROR("Range end value [", std::stoi(sm.str(2)), "] invalid in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                if (std::stoi(sm.str(3)) > (std::stoi(sm.str(2)) - std::stoi(sm.str(1)))) {
+                    TIMER_RULE_ERROR("Range value < frequency value in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+            }
+            break;
+            case RuleType::Value:
+                if (std::stoi(rule.second) < _field_min_value || std::stoi(rule.second) > _field_max_value) {
+                    TIMER_RULE_ERROR("Value invalid in rule[" , rule.second, "]");
+                    _parsed = false;
+                }
+                break;
+            default:
+                break;
+        }
+    }
+}
+
+std::tuple<Return, int> ScheduleRuleCrontab::FieldRule::PeekNextValue()
+{
+    return PeekNextValue(_last_value);
+}
+
+std::tuple<Return, int> ScheduleRuleCrontab::FieldRule::PeekNextValue(int curr_value)
+{
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    int next_value_min = -1;
+    for (auto rule : _rule_map) {
+        int next_value_tmp = -1;
+        switch (rule.first) {
+            case RuleType::Any:
+                next_value_tmp = curr_value + 1;
+                break;
+            case RuleType::Frequency:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (sm.size() != 2) {
+                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                next_value_tmp = curr_value + std::stoi(sm.str(1));
+            }
+            break;
+            case RuleType::Range:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (sm.size() != 3) {
+                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (curr_value < std::stoi(sm.str(1))) {
+                    next_value_tmp = std::stoi(sm.str(1));
+                } else if (curr_value >= std::stoi(sm.str(2))) {
+                    next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(sm.str(1));
+                } else {
+                    next_value_tmp = curr_value + 1;
+                }
+            }
+            break;
+            case RuleType::FrequencyRange:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (sm.size() != 4) {
+                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (curr_value < std::stoi(sm.str(1))) {
+                    next_value_tmp = std::stoi(sm.str(1));
+                } else if (curr_value >= std::stoi(sm.str(2))) {
+                    next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(sm.str(1));
+                } else {
+                    next_value_tmp = curr_value + std::stoi(sm.str(3));
+                    if (next_value_tmp > std::stoi(sm.str(2))) {
+                        next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(sm.str(1));
+                    }
+                }
+            }
+            break;
+            case RuleType::Value:
+                if (curr_value < std::stoi(rule.second)) {
+                    next_value_tmp = std::stoi(rule.second);
+                } else {
+                    next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(rule.second);
+                }
+                break;
+            default:
+                return {Return::ESCHEDULE_RULE_INVALID, -1};
+        }
+        if (next_value_min == -1) {
+            next_value_min = next_value_tmp;
+        } else {
+            next_value_min = next_value_tmp < next_value_min ? next_value_tmp : next_value_min;
+        }
+    }
+    return {Return::SUCCESS, next_value_min};
+}
+
+std::tuple<Return, int> ScheduleRuleCrontab::FieldRule::GetNextValue()
+{
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    if (_last_value == -1) {
+        auto ret = PeekNextValue();
+        if (Return::SUCCESS == std::get<0>(ret)) {
+            _last_value = std::get<1>(ret);
+        }
+        return ret;
+    }
+    return GetNextValue(_last_value);
+}
+
+std::tuple<Return, int> ScheduleRuleCrontab::FieldRule::GetNextValue(int curr_value)
+{
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    if (_last_value < _field_min_value || _last_value > _field_max_value) {
+        return {Return::ERROR, -1};
+    }
+    auto ret = PeekNextValue(curr_value);
+    if (std::get<0>(ret) == Return::SUCCESS) {
+        _last_value = std::get<1>(ret) % (_field_max_value - _field_min_value + 1);
+    }
+    return ret;
+}
+
 //ScheduleRuleCrontab::YearRule
 ScheduleRuleCrontab::YearRule::YearRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_YEAR, TIMER_MIN_YEAR)
 {
 }
 ScheduleRuleCrontab::YearRule::YearRule(ScheduleRuleCrontab::YearRule&& other)
@@ -89,18 +305,18 @@ ScheduleRuleCrontab::YearRule::YearRule(ScheduleRuleCrontab::YearRule&& other)
 
 ScheduleRuleCrontab::YearRule::~YearRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::YearRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::YearRule::PeekNextValue()
 {
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
     if (_last_value == -1) {
         auto start_days = std::chrono::floor<std::chrono::days>(_start_time);
         auto start_year = std::chrono::year_month_day(start_days).year();
-        _last_value = (int)start_year;
-        return {Return::SUCCESS, _last_value};
+        return {Return::SUCCESS, (int)start_year};
     }
-    return GetNextValue(_last_value);
+    return PeekNextValue(_last_value);
 }
 
-std::tuple<Return, int> ScheduleRuleCrontab::YearRule::GetNextValue(int curr_value)
+std::tuple<Return, int> ScheduleRuleCrontab::YearRule::PeekNextValue(int curr_value)
 {
     if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
     int next_value_min = -1;
@@ -108,7 +324,6 @@ std::tuple<Return, int> ScheduleRuleCrontab::YearRule::GetNextValue(int curr_val
     for (auto rule : _rule_map) {
         int next_value_tmp = -1;
         Return ret_tmp = Return::SUCCESS;
-        TIMER_RULE_ERROR("--grh-- rule [", rule.second, "]");
         switch (rule.first) {
             case RuleType::Any:
                 next_value_tmp = curr_value + 1;
@@ -186,7 +401,6 @@ std::tuple<Return, int> ScheduleRuleCrontab::YearRule::GetNextValue(int curr_val
             default:
                 return {Return::ESCHEDULE_RULE_INVALID, -1};
         }
-        TIMER_RULE_ERROR("---grh---[", next_value_tmp, "]");
         if (ret != Return::SUCCESS) {
             ret = ret_tmp;
         }
@@ -198,580 +412,151 @@ std::tuple<Return, int> ScheduleRuleCrontab::YearRule::GetNextValue(int curr_val
             }
         }
     }
-    _last_value = ret == Return::SUCCESS ? next_value_min : _last_value;
-    return {ret, _last_value};
+    if (next_value_min > TIMER_MAX_YEAR) {
+        ret = Return::ESCHEDULE_RULE_REACH_LIMIT;
+    }
+    return {ret, next_value_min};
 }
-
 
 //ScheduleRuleCrontab::MonthRule
 ScheduleRuleCrontab::MonthRule::MonthRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_MONTH, TIMER_MIN_MONTH)
 {
-    valid_rule_();
 }
 ScheduleRuleCrontab::MonthRule::MonthRule(ScheduleRuleCrontab::MonthRule&& other)
     : ScheduleRuleCrontab::FieldRule(std::move(other)) { }
 
 ScheduleRuleCrontab::MonthRule::~MonthRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::MonthRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::MonthRule::PeekNextValue()
 {
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
     if (_last_value == -1) {
         auto start_days = std::chrono::floor<std::chrono::days>(_start_time);
         auto start_month = std::chrono::year_month_day(start_days).month();
-        _last_value = (unsigned int)start_month;
-        return {Return::SUCCESS, _last_value};
+        return {Return::SUCCESS, (unsigned int)start_month};
     }
-    return GetNextValue(_last_value);
+    return FieldRule::PeekNextValue(_last_value);
 }
-
-std::tuple<Return, int> ScheduleRuleCrontab::MonthRule::GetNextValue(int curr_value)
-{
-    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
-    int next_value_min = -1;
-    for (auto rule : _rule_map) {
-        int next_value_tmp = -1;
-        TIMER_RULE_ERROR("--grh-- rule [", rule.second, "]");
-        switch (rule.first) {
-            case RuleType::Any:
-                next_value_tmp = curr_value + 1;
-                break;
-            case RuleType::Frequency:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                    return {Return::ESCHEDULE_RULE_INVALID, -1};
-                }
-                if (sm.size() != 2) {
-                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                    return {Return::ESCHEDULE_RULE_INVALID, -1};
-                }
-                next_value_tmp = curr_value + std::stoi(sm.str(1));
-            }
-            break;
-            case RuleType::Range:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
-                    _parsed = false;
-                    return {Return::ESCHEDULE_RULE_INVALID, -1};
-                }
-                if (sm.size() != 3) {
-                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
-                    _parsed = false;
-                    return {Return::ESCHEDULE_RULE_INVALID, -1};
-                }
-                if (curr_value < std::stoi(sm.str(1))) {
-                    next_value_tmp = std::stoi(sm.str(1));
-                } else if (curr_value >= std::stoi(sm.str(2))) {
-                    next_value_tmp = 12 + std::stoi(sm.str(1));
-                } else {
-                    next_value_tmp = curr_value + 1;
-                }
-            }
-            break;
-            case RuleType::FrequencyRange:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                    return {Return::ESCHEDULE_RULE_INVALID, -1};
-                }
-                if (sm.size() != 4) {
-                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                    return {Return::ESCHEDULE_RULE_INVALID, -1};
-                }
-                if (curr_value < std::stoi(sm.str(1))) {
-                    next_value_tmp = std::stoi(sm.str(1));
-                } else if (curr_value >= std::stoi(sm.str(2))) {
-                    next_value_tmp = 12 + std::stoi(sm.str(1));
-                } else {
-                    next_value_tmp = curr_value + std::stoi(sm.str(3));
-                    if (next_value_tmp > std::stoi(sm.str(2))) {
-                        next_value_tmp = 12 + std::stoi(sm.str(1));
-                    }
-                }
-            }
-            break;
-            case RuleType::Value:
-                if (curr_value < std::stoi(rule.second)) {
-                    next_value_tmp = std::stoi(rule.second);
-                } else {
-                    next_value_tmp = 12 + std::stoi(rule.second);
-                }
-                break;
-            default:
-                return {Return::ESCHEDULE_RULE_INVALID, -1};
-        }
-        TIMER_RULE_ERROR("---grh---[", next_value_tmp, "]");
-        if (next_value_min == -1) {
-            next_value_min = next_value_tmp;
-        } else {
-            next_value_min = next_value_tmp < next_value_min ? next_value_tmp : next_value_min;
-        }
-    }
-    _last_value = next_value_min;
-    return {Return::SUCCESS, _last_value};
-}
-
-void ScheduleRuleCrontab::MonthRule::valid_rule_()
-{
-    for (auto rule : _rule_map) {
-        switch (rule.first) {
-            case RuleType::Frequency:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 2) {
-                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Range:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 3) {
-                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) == 0 || std::stoi(sm.str(1)) > 12) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) == 0 || std::stoi(sm.str(2)) > 12) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::FrequencyRange:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 4) {
-                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) == 0 || std::stoi(sm.str(1)) > 12) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) == 0 || std::stoi(sm.str(2)) > 12) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(3)) > (std::stoi(sm.str(2)) - std::stoi(sm.str(1)))) {
-                    TIMER_RULE_ERROR("Range value < frequency value in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Value:
-                if (std::stoi(rule.second) == 0 || std::stoi(rule.second) > 12) {
-                    TIMER_RULE_ERROR("Value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                break;
-            default:
-                break;
-        }
-    }
-}
-
 
 //ScheduleRuleCrontab::DayOfMonthRule
 ScheduleRuleCrontab::DayOfMonthRule::DayOfMonthRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_DAYOFMONTH, TIMER_MIN_DAYOFMONTH)
 {
-    valid_rule_();
 }
 ScheduleRuleCrontab::DayOfMonthRule::DayOfMonthRule(ScheduleRuleCrontab::DayOfMonthRule&& other)
     : ScheduleRuleCrontab::FieldRule(std::move(other)) { }
 
 ScheduleRuleCrontab::DayOfMonthRule::~DayOfMonthRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::DayOfMonthRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::DayOfMonthRule::PeekNextValue()
 {
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
     if (_last_value == -1) {
         auto start_days = std::chrono::floor<std::chrono::days>(_start_time);
         auto start_day = std::chrono::year_month_day(start_days).day();
         _last_value = (unsigned int)start_day;
-        return {Return::SUCCESS, _last_value};
+        return {Return::SUCCESS, (unsigned int)start_day};
     }
-    return GetNextValue(_last_value);
+    return FieldRule::PeekNextValue(_last_value);
 }
 
-std::tuple<Return, int> ScheduleRuleCrontab::DayOfMonthRule::GetNextValue(int curr_value)
+std::tuple<Return, int> ScheduleRuleCrontab::DayOfMonthRule::PeekNextValue(int curr_value)
 {
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
 
-}
-
-void ScheduleRuleCrontab::DayOfMonthRule::valid_rule_()
-{
-
+    return {Return::SUCCESS, curr_value};
 }
 
 //ScheduleRuleCrontab::DayOfWeekRule
 ScheduleRuleCrontab::DayOfWeekRule::DayOfWeekRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_DAYOFWEEK, TIMER_MIN_DAYOFWEEK)
 {
-    valid_rule_();
 }
 ScheduleRuleCrontab::DayOfWeekRule::DayOfWeekRule(ScheduleRuleCrontab::DayOfWeekRule&& other)
     : ScheduleRuleCrontab::FieldRule(std::move(other)) { }
 
 ScheduleRuleCrontab::DayOfWeekRule::~DayOfWeekRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::DayOfWeekRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::DayOfWeekRule::PeekNextValue()
 {
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    if (_last_value == -1) {
+        auto start_days = std::chrono::floor<std::chrono::days>(_start_time);
+        auto start_weekday = std::chrono::year_month_weekday(start_days).index();
+        _last_value = (unsigned int)start_day;
+        return {Return::SUCCESS, (unsigned int)start_day};
+    }
+    return FieldRule::PeekNextValue(_last_value);
+    return {Return::SUCCESS, -1};
 
 }
 
-std::tuple<Return, int> ScheduleRuleCrontab::DayOfWeekRule::GetNextValue(int curr_value)
+std::tuple<Return, int> ScheduleRuleCrontab::DayOfWeekRule::PeekNextValue(int curr_value)
 {
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
 
-}
-
-void ScheduleRuleCrontab::DayOfWeekRule::valid_rule_()
-{
-
+    return {Return::SUCCESS, curr_value};
 }
 
 //ScheduleRuleCrontab::HourRule
 ScheduleRuleCrontab::HourRule::HourRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_HOUR, TIMER_MIN_HOUR)
 {
-    valid_rule_();
 }
 ScheduleRuleCrontab::HourRule::HourRule(ScheduleRuleCrontab::HourRule&& other)
     : ScheduleRuleCrontab::FieldRule(std::move(other)) { }
 
 ScheduleRuleCrontab::HourRule::~HourRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::HourRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::HourRule::PeekNextValue()
 {
-
-}
-
-std::tuple<Return, int> ScheduleRuleCrontab::HourRule::GetNextValue(int curr_value)
-{
-
-}
-
-void ScheduleRuleCrontab::HourRule::valid_rule_()
-{
-   for (auto rule : _rule_map) {
-        switch (rule.first) {
-            case RuleType::Frequency:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 2) {
-                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Range:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 3) {
-                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) > 23) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) > 23) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::FrequencyRange:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 4) {
-                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) > 23) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) > 23) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(3)) > (std::stoi(sm.str(2)) - std::stoi(sm.str(1)))) {
-                    TIMER_RULE_ERROR("Range value < frequency value in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Value:
-                if (std::stoi(rule.second) > 23) {
-                    TIMER_RULE_ERROR("Value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                break;
-            default:
-                break;
-        }
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    if (_last_value == -1) {
+        std::chrono::hh_mm_ss start_time(_start_time- std::chrono::floor<std::chrono::days>(_start_time));
+        return {Return::SUCCESS, start_time.hours().count()};
     }
+    return FieldRule::PeekNextValue(_last_value);
 }
 
 //ScheduleRuleCrontab::MinuteRule
 ScheduleRuleCrontab::MinuteRule::MinuteRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_MINUTE, TIMER_MIN_MINUTE)
 {
-    valid_rule_();
 }
 ScheduleRuleCrontab::MinuteRule::MinuteRule(ScheduleRuleCrontab::MinuteRule&& other)
     : ScheduleRuleCrontab::FieldRule(std::move(other)) { }
 
 ScheduleRuleCrontab::MinuteRule::~MinuteRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::MinuteRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::MinuteRule::PeekNextValue()
 {
-
-}
-
-std::tuple<Return, int> ScheduleRuleCrontab::MinuteRule::GetNextValue(int curr_value)
-{
-
-}
-
-void ScheduleRuleCrontab::MinuteRule::valid_rule_()
-{
-   for (auto rule : _rule_map) {
-        switch (rule.first) {
-            case RuleType::Frequency:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 2) {
-                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Range:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 3) {
-                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) > 59) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) > 59) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::FrequencyRange:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 4) {
-                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) > 59) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) > 59) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(3)) > (std::stoi(sm.str(2)) - std::stoi(sm.str(1)))) {
-                    TIMER_RULE_ERROR("Range value < frequency value in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Value:
-                if (std::stoi(rule.second) > 59) {
-                    TIMER_RULE_ERROR("Value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                break;
-            default:
-                break;
-        }
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    if (_last_value == -1) {
+        std::chrono::hh_mm_ss start_time(_start_time- std::chrono::floor<std::chrono::days>(_start_time));
+        return {Return::SUCCESS, start_time.minutes().count()};
     }
+    return FieldRule::PeekNextValue(_last_value);
 }
 
 //ScheduleRuleCrontab::SecondRule
 ScheduleRuleCrontab::SecondRule::SecondRule(ScheduleRule::RefTimePoint start_time, std::string rule)
-        : ScheduleRuleCrontab::FieldRule(start_time, rule)
+        : ScheduleRuleCrontab::FieldRule(start_time, rule, TIMER_MAX_SECOND, TIMER_MIN_SECOND)
 {
-    valid_rule_();
 }
 ScheduleRuleCrontab::SecondRule::SecondRule(ScheduleRuleCrontab::SecondRule&& other)
     : ScheduleRuleCrontab::FieldRule(std::move(other)) { }
 
 ScheduleRuleCrontab::SecondRule::~SecondRule() { }
 
-std::tuple<Return, int> ScheduleRuleCrontab::SecondRule::GetNextValue()
+std::tuple<Return, int> ScheduleRuleCrontab::SecondRule::PeekNextValue()
 {
-
-}
-
-std::tuple<Return, int> ScheduleRuleCrontab::SecondRule::GetNextValue(int curr_value)
-{
-
-}
-
-void ScheduleRuleCrontab::SecondRule::valid_rule_()
-{
-   for (auto rule : _rule_map) {
-        switch (rule.first) {
-            case RuleType::Frequency:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 2) {
-                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Range:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 3) {
-                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) > 59) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) > 59) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::FrequencyRange:
-            {
-                std::smatch sm;
-                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
-                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (sm.size() != 4) {
-                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) >= std::stoi(sm.str(2))) {
-                    TIMER_RULE_ERROR("Range start >= end in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(1)) > 59) {
-                    TIMER_RULE_ERROR("Range start value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(2)) > 59) {
-                    TIMER_RULE_ERROR("Range end value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                if (std::stoi(sm.str(3)) > (std::stoi(sm.str(2)) - std::stoi(sm.str(1)))) {
-                    TIMER_RULE_ERROR("Range value < frequency value in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-            }
-            break;
-            case RuleType::Value:
-                if (std::stoi(rule.second) > 59) {
-                    TIMER_RULE_ERROR("Value invalid in rule[" , rule.second, "]");
-                    _parsed = false;
-                }
-                break;
-            default:
-                break;
-        }
+    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    if (_last_value == -1) {
+        std::chrono::hh_mm_ss start_time(_start_time- std::chrono::floor<std::chrono::days>(_start_time));
+        return {Return::SUCCESS, start_time.seconds().count()};
     }
+    return FieldRule::PeekNextValue(_last_value);
 }
 
 //ScheduleRuleCrontab
@@ -816,6 +601,12 @@ ScheduleRuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
     TIMER_RULE_INFO("next year[",  std::get<1>(_crontab_rule[Field::Year]->GetNextValue()), "]");
     TIMER_RULE_INFO("next month[", std::get<1>(_crontab_rule[Field::Month]->GetNextValue()), "]");
     TIMER_RULE_INFO("next month[", std::get<1>(_crontab_rule[Field::Month]->GetNextValue()), "]");
+    TIMER_RULE_INFO("next hour[", std::get<1>(_crontab_rule[Field::Hour]->GetNextValue()), "]");
+    TIMER_RULE_INFO("next hour[", std::get<1>(_crontab_rule[Field::Hour]->GetNextValue()), "]");
+    TIMER_RULE_INFO("next minute[", std::get<1>(_crontab_rule[Field::Minute]->GetNextValue()), "]");
+    TIMER_RULE_INFO("next minute[", std::get<1>(_crontab_rule[Field::Minute]->GetNextValue()), "]");
+    TIMER_RULE_INFO("next second[", std::get<1>(_crontab_rule[Field::Second]->GetNextValue()), "]");
+    TIMER_RULE_INFO("next second[", std::get<1>(_crontab_rule[Field::Second]->GetNextValue()), "]");
     return reftime;
 }
 
@@ -852,10 +643,15 @@ ScheduleRuleCrontab::FieldRule* ScheduleRuleCrontab::parse_field_rule_(int field
         case Field::Month:
             return new ScheduleRuleCrontab::MonthRule(_start_time, rule);
         case Field::DayOfMonth:
+            break;
         case Field::DayOfWeek:
+            break;
         case Field::Hour:
+            return new ScheduleRuleCrontab::HourRule(_start_time, rule);
         case Field::Minute:
+            return new ScheduleRuleCrontab::MinuteRule(_start_time, rule);
         case Field::Second:
+            return new ScheduleRuleCrontab::SecondRule(_start_time, rule);
         default:
             break;
     }

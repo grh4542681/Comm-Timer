@@ -7,10 +7,25 @@
 #include "timer_return.h"
 #include "timer_schedule_rule.h"
 
+#define TIMER_MAX_YEAR (3000)
+#define TIMER_MIN_YEAR (0)
+#define TIMER_MAX_MONTH (12)
+#define TIMER_MIN_MONTH (1)
+#define TIMER_MAX_DAYOFMONTH (31)
+#define TIMER_MIN_DAYOFMONTH (1)
+#define TIMER_MAX_DAYOFWEEK (7)
+#define TIMER_MIN_DAYOFWEEK (1)
+#define TIMER_MAX_HOUR (23)
+#define TIMER_MIN_HOUR (0)
+#define TIMER_MAX_MINUTE (59)
+#define TIMER_MIN_MINUTE (0)
+#define TIMER_MAX_SECOND (59)
+#define TIMER_MIN_SECOND (0)
+
 namespace xg::timer {
 
 class ScheduleRuleCrontab : public ScheduleRule {
-public:
+private:
     class FieldRule {
     public:
         enum class RuleType {
@@ -22,26 +37,32 @@ public:
             Value,
         };
     public:
-        FieldRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        FieldRule(ScheduleRule::RefTimePoint start_time, std::string rule, int max, int min);
         FieldRule(FieldRule&& other);
         virtual ~FieldRule() { };
 
+        void ParseRule();
+        void ValidRule();
         bool Valid();
         void Reset();
-        virtual std::tuple<Return, int> GetNextValue() = 0;
-        virtual std::tuple<Return, int> GetNextValue(int curr_value) = 0;
+        void SetLastTime(ScheduleRule::RefTimePoint last_time);
+        virtual std::tuple<Return, int> PeekNextValue();
+        virtual std::tuple<Return, int> PeekNextValue(int curr_value);
+        virtual std::tuple<Return, int> GetNextValue();
+        virtual std::tuple<Return, int> GetNextValue(int curr_value);
         void Print();
-        void parse_rule_();
     protected:
         bool _parsed;
         std::string _raw_rule;
         ScheduleRule::RefTimePoint _start_time;
         ScheduleRule::RefTimePoint _last_time;
-
         int _last_value;
+        int _field_max_value;
+        int _field_min_value;
+
         std::map<RuleType, std::string> _rule_map;
-    protected:
         static std::map<RuleType, std::regex> RegexTable;
+    protected:
     };
 
     class YearRule : public FieldRule {
@@ -50,8 +71,8 @@ public:
         YearRule(YearRule&& other);
         ~YearRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
+        std::tuple<Return, int> PeekNextValue();
+        std::tuple<Return, int> PeekNextValue(int curr_value);
     };
 
     class MonthRule : public FieldRule {
@@ -60,12 +81,8 @@ public:
         MonthRule(MonthRule&& other);
         ~MonthRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
-    private:
-        void valid_rule_();
+        std::tuple<Return, int> PeekNextValue();
     };
-
 
     class DayOfMonthRule : public FieldRule {
     public:
@@ -73,8 +90,8 @@ public:
         DayOfMonthRule(DayOfMonthRule&& other);
         ~DayOfMonthRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
+        std::tuple<Return, int> PeekNextValue();
+        std::tuple<Return, int> PeekNextValue(int curr_value);
     private:
         void valid_rule_();
     };
@@ -85,8 +102,8 @@ public:
         DayOfWeekRule(DayOfWeekRule&& other);
         ~DayOfWeekRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
+        std::tuple<Return, int> PeekNextValue();
+        std::tuple<Return, int> PeekNextValue(int curr_value);
     private:
         void valid_rule_();
     };
@@ -95,10 +112,9 @@ public:
     public:
         HourRule(ScheduleRule::RefTimePoint start_time, std::string rule);
         HourRule(HourRule&& other);
-        ~MonthRule();
+        ~HourRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
+        std::tuple<Return, int> PeekNextValue();
     private:
         void valid_rule_();
     };
@@ -109,8 +125,7 @@ public:
         MinuteRule(MinuteRule&& other);
         ~MinuteRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
+        std::tuple<Return, int> PeekNextValue();
     private:
         void valid_rule_();
     };
@@ -121,8 +136,7 @@ public:
         SecondRule(SecondRule&& other);
         ~SecondRule();
 
-        std::tuple<Return, int> GetNextValue();
-        std::tuple<Return, int> GetNextValue(int curr_value);
+        std::tuple<Return, int> PeekNextValue();
     private:
         void valid_rule_();
     };
