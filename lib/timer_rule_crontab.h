@@ -1,11 +1,11 @@
-#ifndef __TIMER_SCHEDULE_RULE_CRONTAB_H__
-#define __TIMER_SCHEDULE_RULE_CRONTAB_H__
+#ifndef __TIMER_RULE_CRONTAB_H__
+#define __TIMER_RULE_CRONTAB_H__
 
 #include <regex>
 #include <memory>
 
 #include "timer_return.h"
-#include "timer_schedule_rule.h"
+#include "timer_rule.h"
 
 #define TIMER_MAX_YEAR (3000)
 #define TIMER_MIN_YEAR (0)
@@ -36,7 +36,7 @@
 
 namespace xg::timer {
 
-class ScheduleRuleCrontab : public ScheduleRule {
+class RuleCrontab : public Rule {
 private:
     class FieldRule {
     public:
@@ -49,7 +49,7 @@ private:
             Value,
         };
     public:
-        FieldRule(ScheduleRule::RefTimePoint start_time, std::string rule, int max, int min);
+        FieldRule(Rule::RefTimePoint start_time, std::string rule, int max, int min);
         FieldRule(FieldRule&& other);
         virtual ~FieldRule() { };
 
@@ -57,7 +57,7 @@ private:
         void ValidRule();
         bool Valid();
         void Reset();
-        void SetLastTime(ScheduleRule::RefTimePoint last_time);
+        void SetLastTime(Rule::RefTimePoint last_time);
         virtual std::tuple<Return, int> PeekNextValue();
         virtual std::tuple<Return, int> PeekNextValue(int curr_value);
         virtual std::tuple<Return, int> GetNextValue();
@@ -66,8 +66,8 @@ private:
     protected:
         bool _parsed;
         std::string _raw_rule;
-        ScheduleRule::RefTimePoint _start_time;
-        ScheduleRule::RefTimePoint _last_time;
+        Rule::RefTimePoint _start_time;
+        Rule::RefTimePoint _last_time;
         int _last_value;
         int _field_max_value;
         int _field_min_value;
@@ -78,7 +78,7 @@ private:
 
     class YearRule : public FieldRule {
     public:
-        YearRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        YearRule(Rule::RefTimePoint start_time, std::string rule);
         YearRule(YearRule&& other);
         ~YearRule();
 
@@ -88,7 +88,7 @@ private:
 
     class MonthRule : public FieldRule {
     public:
-        MonthRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        MonthRule(Rule::RefTimePoint start_time, std::string rule);
         MonthRule(MonthRule&& other);
         ~MonthRule();
 
@@ -97,7 +97,7 @@ private:
 
     class DayOfMonthRule : public FieldRule {
     public:
-        DayOfMonthRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        DayOfMonthRule(Rule::RefTimePoint start_time, std::string rule);
         DayOfMonthRule(DayOfMonthRule&& other);
         ~DayOfMonthRule();
 
@@ -109,7 +109,7 @@ private:
 
     class DayOfWeekRule : public FieldRule {
     public:
-        DayOfWeekRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        DayOfWeekRule(Rule::RefTimePoint start_time, std::string rule);
         DayOfWeekRule(DayOfWeekRule&& other);
         ~DayOfWeekRule();
 
@@ -120,7 +120,7 @@ private:
 
     class HourRule : public FieldRule {
     public:
-        HourRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        HourRule(Rule::RefTimePoint start_time, std::string rule);
         HourRule(HourRule&& other);
         ~HourRule();
 
@@ -131,7 +131,7 @@ private:
 
     class MinuteRule : public FieldRule {
     public:
-        MinuteRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        MinuteRule(Rule::RefTimePoint start_time, std::string rule);
         MinuteRule(MinuteRule&& other);
         ~MinuteRule();
 
@@ -142,7 +142,7 @@ private:
 
     class SecondRule : public FieldRule {
     public:
-        SecondRule(ScheduleRule::RefTimePoint start_time, std::string rule);
+        SecondRule(Rule::RefTimePoint start_time, std::string rule);
         SecondRule(SecondRule&& other);
         ~SecondRule();
 
@@ -164,21 +164,21 @@ public:
         End,
     };
 public:
-    ScheduleRuleCrontab(std::string rule);
-    ScheduleRuleCrontab(RefTimePoint start_time, std::string rule);
-    ~ScheduleRuleCrontab();
+    RuleCrontab(std::string rule);
+    RuleCrontab(RefTimePoint start_time, std::string rule);
+    ~RuleCrontab();
 
     /**
-    * @brief Valid - Inherited function(ScheduleRule).
+    * @brief Valid - Inherited function(Rule).
     */
     bool Valid(WheelAccuracy& accuracy);
     /**
-    * @brief Valid - Inherited function(ScheduleRule).
+    * @brief Valid - Inherited function(Rule).
     */
     std::tuple<Return, WheelScale> GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& accuracy);
 
     /**
-    * @brief Valid - Inherited function(ScheduleRule).
+    * @brief Valid - Inherited function(Rule).
     */
     std::tuple<Return, RefTimePoint> GetNextExprieTime(RefTimePoint&& reftime);
     std::tuple<Return, RefTimePoint> GetNextExprieTime();

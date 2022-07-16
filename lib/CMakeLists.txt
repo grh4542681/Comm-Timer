@@ -2,8 +2,8 @@ set(LIBXGTIMER_HRD "${XG_TIMER_PROJ_TOP}/include/logger"
                    "${XG_TIMER_PROJ_TOP}/include"
                    "${XG_TIMER_PROJ_TOP}/lib"
                    )
-set(LIBXGTIMER_SRC timer_schedule_rule_duration.cc
-                   timer_schedule_rule_crontab.cc
+set(LIBXGTIMER_SRC timer_rule_duration.cc
+                   timer_rule_crontab.cc
                    )
 
 set(LIBXGTIMER_TARGETS)

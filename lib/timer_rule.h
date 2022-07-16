@@ -4,12 +4,12 @@
  *******************************************************
  * @author   : Ronghua Gao
  * @date     : 2022-04-22 09:24
- * @file     : timer_schedule_rule.h
- * @brief    : Scheduled task scheduling rule base class.
+ * @file     : timer_rule.h
+ * @brief    : d task scheduling rule base class.
  * @note     : Email - grh4542681@163.com
  * ******************************************************/
-#ifndef __TIMER_SCHEDULE_RULE_H__
-#define __TIMER_SCHEDULE_RULE_H__
+#ifndef __TIMER_RULE_H__
+#define __TIMER_RULE_H__
 
 #include <chrono>
 #include "timer_return.h"
@@ -18,17 +18,17 @@
 namespace xg::timer {
 
 /**
-* @brief - Scheduled task scheduling rule base class.
+* @brief - d task scheduling rule base class.
 */
-class ScheduleRule {
+class Rule {
 public:
     /**
     * @brief - Base time type, accurate to nanoseconds.
     */
     using RefTimePoint = std::chrono::time_point<std::chrono::system_clock, std::chrono::nanoseconds>;
 public:
-    ScheduleRule() { }
-    virtual ~ScheduleRule() { }
+    Rule() { }
+    virtual ~Rule() { }
 
     /**
     * @brief Valid - Whether the scheduling rules are correct under the given accuracy.
