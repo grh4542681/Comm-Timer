@@ -285,13 +285,9 @@ std::tuple<Return, int> ScheduleRuleCrontab::FieldRule::GetNextValue()
 std::tuple<Return, int> ScheduleRuleCrontab::FieldRule::GetNextValue(int curr_value)
 {
     if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
-    if (_last_value < _field_min_value || _last_value > _field_max_value) {
-        return {Return::ERROR, -1};
-    }
+    TIMER_RULE_INFO("--grh-- [", __LINE__, "]");
     auto ret = PeekNextValue(curr_value);
-    if (std::get<0>(ret) == Return::SUCCESS) {
-        _last_value = std::get<1>(ret) % (_field_max_value - _field_min_value + 1);
-    }
+    TIMER_RULE_INFO("--grh-- [", __LINE__, "]");
     return ret;
 }
 
@@ -464,6 +460,99 @@ std::tuple<Return, int> ScheduleRuleCrontab::DayOfMonthRule::PeekNextValue()
 std::tuple<Return, int> ScheduleRuleCrontab::DayOfMonthRule::PeekNextValue(int curr_value)
 {
     if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
+    auto start_days = std::chrono::floor<std::chrono::days>(_last_time);
+    auto start_year = std::chrono::year_month_day(start_days).year();
+    auto start_month = std::chrono::year_month_day(start_days).month();
+    _field_max_value = GetMonthMaxDays((int)start_year, (unsigned int)start_month);
+    TIMER_RULE_ERROR("---grh--- max [", _field_max_value, "]");
+    int next_value_min = -1;
+    for (auto rule : _rule_map) {
+        int next_value_tmp = -1;
+        switch (rule.first) {
+            case RuleType::Any:
+                next_value_tmp = curr_value + 1;
+                break;
+            case RuleType::Frequency:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (sm.size() != 2) {
+                    TIMER_RULE_ERROR("Not found right frequency in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                next_value_tmp = curr_value + std::stoi(sm.str(1));
+            }
+            break;
+            case RuleType::Range:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (sm.size() != 3) {
+                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (curr_value < std::stoi(sm.str(1))) {
+                    next_value_tmp = std::stoi(sm.str(1));
+                } else if (curr_value >= std::stoi(sm.str(2))) {
+                    next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(sm.str(1));
+                } else {
+                    next_value_tmp = curr_value + 1;
+                }
+            }
+            break;
+            case RuleType::FrequencyRange:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (sm.size() != 4) {
+                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return {Return::ESCHEDULE_RULE_INVALID, -1};
+                }
+                if (curr_value < std::stoi(sm.str(1))) {
+                    next_value_tmp = std::stoi(sm.str(1));
+                } else if (curr_value >= std::stoi(sm.str(2))) {
+                    next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(sm.str(1));
+                } else {
+                    next_value_tmp = curr_value + std::stoi(sm.str(3));
+                    if (next_value_tmp > std::stoi(sm.str(2))) {
+                        next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(sm.str(1));
+                    }
+                }
+            }
+            break;
+            case RuleType::Value:
+                if (curr_value < std::stoi(rule.second)) {
+                    next_value_tmp = std::stoi(rule.second);
+                } else {
+                    next_value_tmp = _field_max_value - _field_min_value + 1 + std::stoi(rule.second);
+                }
+                break;
+            default:
+                return {Return::ESCHEDULE_RULE_INVALID, -1};
+        }
+        if (next_value_min == -1) {
+            next_value_min = next_value_tmp;
+        } else {
+            next_value_min = next_value_tmp < next_value_min ? next_value_tmp : next_value_min;
+        }
+    }
+    return {Return::SUCCESS, next_value_min};
+    
 
     return {Return::SUCCESS, curr_value};
 }
@@ -483,20 +572,11 @@ std::tuple<Return, int> ScheduleRuleCrontab::DayOfWeekRule::PeekNextValue()
     if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
     if (_last_value == -1) {
         auto start_days = std::chrono::floor<std::chrono::days>(_start_time);
-        auto start_weekday = std::chrono::year_month_weekday(start_days).index();
-        _last_value = (unsigned int)start_day;
-        return {Return::SUCCESS, (unsigned int)start_day};
+        auto start_weekday = std::chrono::year_month_weekday(start_days).weekday().c_encoding();
+        TIMER_RULE_INFO("---grh--- week [", start_weekday, "]");
+        return {Return::SUCCESS, start_weekday};
     }
     return FieldRule::PeekNextValue(_last_value);
-    return {Return::SUCCESS, -1};
-
-}
-
-std::tuple<Return, int> ScheduleRuleCrontab::DayOfWeekRule::PeekNextValue(int curr_value)
-{
-    if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
-
-    return {Return::SUCCESS, curr_value};
 }
 
 //ScheduleRuleCrontab::HourRule
@@ -594,20 +674,88 @@ ScheduleRuleCrontab::GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& a
     return std::make_tuple(Return(Return::ESCHEDULE_RULE_INVALID), WheelScale());
 }
 
-ScheduleRuleCrontab::RefTimePoint
+std::tuple<Return, ScheduleRuleCrontab::RefTimePoint>
 ScheduleRuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
 {
-    TIMER_RULE_INFO("next year[",  std::get<1>(_crontab_rule[Field::Year]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next year[",  std::get<1>(_crontab_rule[Field::Year]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next month[", std::get<1>(_crontab_rule[Field::Month]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next month[", std::get<1>(_crontab_rule[Field::Month]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next hour[", std::get<1>(_crontab_rule[Field::Hour]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next hour[", std::get<1>(_crontab_rule[Field::Hour]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next minute[", std::get<1>(_crontab_rule[Field::Minute]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next minute[", std::get<1>(_crontab_rule[Field::Minute]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next second[", std::get<1>(_crontab_rule[Field::Second]->GetNextValue()), "]");
-    TIMER_RULE_INFO("next second[", std::get<1>(_crontab_rule[Field::Second]->GetNextValue()), "]");
-    return reftime;
+    auto curr_days = std::chrono::floor<std::chrono::days>(reftime);
+    std::chrono::hh_mm_ss curr_time(reftime - curr_days);
+//    int curr_year = (int)std::chrono::year_month_day(curr_days).year();
+//    int curr_month = (unsigned int)std::chrono::year_month_day(curr_days).month();
+//    int curr_day = (unsigned int)std::chrono::year_month_day(curr_days).day();
+//    int curr_weekday = std::chrono::year_month_weekday(curr_days).weekday().c_encoding();
+
+    ScheduleRuleCrontab::RefTimePoint next_time;
+    int second;
+    int curr_second = curr_time.seconds().count();
+    auto second_ret = _crontab_rule[Field::Second]->GetNextValue(curr_second);
+    if (std::get<0>(second_ret) == Return::SUCCESS) {
+        second = std::get<1>(second_ret);
+    } else {
+        return {std::get<0>(second_ret), next_time};
+    }
+    if (second < TIMER_MAX_SECOND) {
+        next_time = std::chrono::floor<std::chrono::minutes>(reftime)
+                    + std::chrono::seconds(second);
+        return {Return::SUCCESS, next_time};
+    }
+
+    int minute;
+    int curr_minute = curr_time.minutes().count();
+    auto minute_ret = _crontab_rule[Field::Minute]->GetNextValue(curr_minute);
+    if (std::get<0>(second_ret) == Return::SUCCESS) {
+        minute = std::get<1>(minute_ret);
+    } else {
+        return {std::get<0>(minute_ret), next_time};
+    }
+    if (minute < TIMER_MAX_MINUTE) {
+        if (minute - curr_minute >= second / TIMER_SECOND_COUNT) {
+            next_time = std::chrono::floor<std::chrono::hours>(reftime)
+                        + std::chrono::minutes(minute)
+                        + std::chrono::seconds(second % TIMER_SECOND_COUNT);
+            return {Return::SUCCESS, next_time};
+        } else {
+            return {Return::ESCHEDULE_RULE_CONFLICT, next_time};
+        }
+    }
+
+    int hour;
+    int curr_hour = curr_time.hours().count();
+
+    return {Return::SUCCESS, next_time};
+}
+
+std::tuple<Return, ScheduleRuleCrontab::RefTimePoint>
+ScheduleRuleCrontab::GetNextExprieTime()
+{
+    if (_last_time.time_since_epoch().count() == 0) {
+        _last_time = _start_time;
+        return {Return::SUCCESS, _last_time};
+    }
+    TIMER_RULE_INFO("--grh-- [", __LINE__, "]");
+    return GetNextExprieTime(std::move(_last_time));
+}
+
+int ScheduleRuleCrontab::GetMonthMaxDays(int year, int month)
+{
+    switch (month) {
+        case 1:
+        case 3:
+        case 5:
+        case 7:
+        case 8:
+        case 10:
+        case 12:
+            return 31;
+        case 2:
+            if ((((int)year) % 400 == 0) || (((int)year) % 4 == 0 && ((int)year) % 100 != 0)) {
+                return 29;
+            } else {
+                return 28;
+            }
+            break;
+        default:
+            return 30;
+    }
 }
 
 void ScheduleRuleCrontab::parse_rule_()
@@ -643,9 +791,9 @@ ScheduleRuleCrontab::FieldRule* ScheduleRuleCrontab::parse_field_rule_(int field
         case Field::Month:
             return new ScheduleRuleCrontab::MonthRule(_start_time, rule);
         case Field::DayOfMonth:
-            break;
+            return new ScheduleRuleCrontab::DayOfMonthRule(_start_time, rule);
         case Field::DayOfWeek:
-            break;
+            return new ScheduleRuleCrontab::DayOfWeekRule(_start_time, rule);
         case Field::Hour:
             return new ScheduleRuleCrontab::HourRule(_start_time, rule);
         case Field::Minute:
