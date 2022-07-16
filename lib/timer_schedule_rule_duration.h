@@ -45,7 +45,7 @@ public:
     /**
     * @brief Valid - Inherited function(ScheduleRule).
     */
-    RefTimePoint GetNextExprieTime(RefTimePoint&& reftime);
+    std::tuple<Return, RefTimePoint> GetNextExprieTime(RefTimePoint&& reftime);
 
 private:
     std::chrono::nanoseconds _duration_nano;

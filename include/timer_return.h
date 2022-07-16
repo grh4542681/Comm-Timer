@@ -81,7 +81,8 @@ public:
                 { Return::ErrCode::SUCCESS, "Success" },
 
                 { Return::ErrCode::ESCHEDULE_RULE_INVALID, "Bad scheduling rule." },
-                { Return::ErrCode::ESCHEDULE_RULE_REACH_LIMIT, "reach scheduling rule limit." },
+                { Return::ErrCode::ESCHEDULE_RULE_CONFLICT, "Conflict scheduling rule." },
+                { Return::ErrCode::ESCHEDULE_RULE_REACH_LIMIT, "Reach scheduling rule limit." },
             });
         }
     }

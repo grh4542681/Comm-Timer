@@ -71,10 +71,10 @@ ScheduleRuleDuration::GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& 
     return std::make_tuple(Return(Return::SUCCESS), WheelScale(_duration_nano.count() / accuracy.GetAccuracy().count()));
 }
 
-ScheduleRuleDuration::RefTimePoint
+std::tuple<Return, ScheduleRuleDuration::RefTimePoint>
 ScheduleRuleDuration::GetNextExprieTime(RefTimePoint&& reftime)
 {
-    return (reftime + _duration_nano);
+    return {Return::SUCCESS, (reftime + _duration_nano)};
 }
 
 }

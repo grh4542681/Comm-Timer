@@ -58,7 +58,7 @@ public:
     *
     * @returns Next time. 
     */
-    virtual RefTimePoint GetNextExprieTime(RefTimePoint&& reftime) = 0;
+    virtual std::tuple<Return, RefTimePoint> GetNextExprieTime(RefTimePoint&& reftime) = 0;
 };
 
 }
