@@ -1,7 +1,7 @@
-#include "timer_log.h"
-#include "timer_return.h"
-#include "timer_wheel_accuracy.h"
-#include "timer_rule_duration.h"
+#include "timer_log.hh"
+#include "timer_return.hh"
+#include "timer_wheel_accuracy.hh"
+#include "timer_rule_duration.hh"
 
 namespace xg::timer {
 

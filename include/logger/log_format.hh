@@ -1,5 +1,5 @@
-#ifndef __LOG_FORMAT_H__
-#define __LOG_FORMAT_H__
+#ifndef __LOG_FORMAT_HH__
+#define __LOG_FORMAT_HH__
 
 #include <vector>
 #include <iterator>

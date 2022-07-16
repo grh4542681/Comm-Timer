@@ -8,11 +8,11 @@
  * @brief    : Scheduling rules based on time duration.
  * @note     : Email - grh4542681@163.com
  * ******************************************************/
-#ifndef __TIMER_RULE_DURATION_H__
-#define __TIMER_RULE_DURATION_H__
+#ifndef __TIMER_RULE_DURATION_HH__
+#define __TIMER_RULE_DURATION_HH__
 
-#include "timer_wheel_scale.h"
-#include "timer__rule.h"
+#include "timer_wheel_scale.hh"
+#include "timer_rule.hh"
 
 namespace xg::timer {
 

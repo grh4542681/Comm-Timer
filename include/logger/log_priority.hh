@@ -1,5 +1,5 @@
-#ifndef __LOG_PRIORITY_H__
-#define __LOG_PRIORITY_H__
+#ifndef __LOG_PRIORITY_HH__
+#define __LOG_PRIORITY_HH__
 
 namespace xg::timer::log {
 

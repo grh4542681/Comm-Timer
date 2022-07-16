@@ -1,5 +1,5 @@
-#ifndef __LOG_INTERFACE_H__
-#define __LOG_INTERFACE_H__
+#ifndef __LOG_INTERFACE_HH__
+#define __LOG_INTERFACE_HH__
 
 #include <map>
 #include <utility>

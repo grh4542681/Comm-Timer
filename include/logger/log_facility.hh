@@ -1,5 +1,5 @@
-#ifndef __LOG_FACILITY_H__
-#define __LOG_FACILITY_H__
+#ifndef __LOG_FACILITY_HH__
+#define __LOG_FACILITY_HH__
 
 namespace xg::timer::log {
 

@@ -1,5 +1,5 @@
-#ifndef __TIMER_RETURN_H__
-#define __TIMER_RETURN_H__
+#ifndef __TIMER_RETURN_HH__
+#define __TIMER_RETURN_HH__
 
 #include <string>
 #include <map>

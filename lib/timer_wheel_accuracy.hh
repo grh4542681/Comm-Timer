@@ -1,5 +1,5 @@
-#ifndef __TIMER_WHEEL_ACCURACY_H__
-#define __TIMER_WHEEL_ACCURACY_H__
+#ifndef __TIMER_WHEEL_ACCURACY_HH__
+#define __TIMER_WHEEL_ACCURACY_HH__
 
 #include <mutex>
 

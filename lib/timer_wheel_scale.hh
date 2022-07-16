@@ -1,7 +1,7 @@
-#ifndef __TIMER_WHEEL_SCALE_H__
-#define __TIMER_WHEEL_SCALE_H__
+#ifndef __TIMER_WHEEL_SCALE_HH__
+#define __TIMER_WHEEL_SCALE_HH__
 
-#include "timer_wheel_accuracy.h"
+#include "timer_wheel_accuracy.hh"
 
 namespace xg::timer {
 

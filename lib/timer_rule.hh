@@ -8,12 +8,12 @@
  * @brief    : d task scheduling rule base class.
  * @note     : Email - grh4542681@163.com
  * ******************************************************/
-#ifndef __TIMER_RULE_H__
-#define __TIMER_RULE_H__
+#ifndef __TIMER_RULE_HH__
+#define __TIMER_RULE_HH__
 
 #include <chrono>
-#include "timer_return.h"
-#include "timer_wheel_scale.h"
+#include "timer_return.hh"
+#include "timer_wheel_scale.hh"
 
 namespace xg::timer {
 

@@ -1,6 +1,6 @@
 #include <algorithm>
-#include "timer_log.h"
-#include "timer_rule_duration.h"
+#include "timer_log.hh"
+#include "timer_rule_duration.hh"
 
 using namespace std::chrono_literals;
 

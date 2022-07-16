@@ -1,5 +1,5 @@
-#ifndef __LOG_WAPPER_H__
-#define __LOG_WAPPER_H__
+#ifndef __LOG_WAPPER_HH__
+#define __LOG_WAPPER_HH__
 
 #include <map>
 #include <utility>
@@ -9,10 +9,10 @@
 #include <ctime>
 #include <iomanip>
 
-#include "log_facility.h"
-#include "log_priority.h"
-#include "log_format.h"
-#include "log_interface.h"
+#include "log_facility.hh"
+#include "log_priority.hh"
+#include "log_format.hh"
+#include "log_interface.hh"
 
 namespace xg::timer::log {
 

@@ -1,11 +1,11 @@
-#ifndef __TIMER_RULE_CRONTAB_H__
-#define __TIMER_RULE_CRONTAB_H__
+#ifndef __TIMER_RULE_CRONTAB_HH__
+#define __TIMER_RULE_CRONTAB_HH__
 
 #include <regex>
 #include <memory>
 
-#include "timer_return.h"
-#include "timer_rule.h"
+#include "timer_return.hh"
+#include "timer_rule.hh"
 
 #define TIMER_MAX_YEAR (3000)
 #define TIMER_MIN_YEAR (0)

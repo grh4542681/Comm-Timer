@@ -1,4 +1,4 @@
-#include "timer_log.h"
+#include "timer_log.hh"
 int main()
 {
     xg::timer::Log::Emergency("TEST", "test log");

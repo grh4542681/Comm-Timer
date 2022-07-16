@@ -1,9 +1,9 @@
-#ifndef __LOG_WRITER_H__
-#define __LOG_WRITER_H__
+#ifndef __LOG_WRITER_HH__
+#define __LOG_WRITER_HH__
 
 #include <iostream>
 
-#include "log_wapper.h"
+#include "log_wapper.hh"
 
 namespace xg::timer {
 

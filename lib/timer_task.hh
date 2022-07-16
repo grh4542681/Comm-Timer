@@ -1,5 +1,5 @@
-#ifndef __TIMER_TASK_H__
-#define __TIMER_TASK_H__
+#ifndef __TIMER_TASK_HH__
+#define __TIMER_TASK_HH__
 
 namespace xg::timer {
 
