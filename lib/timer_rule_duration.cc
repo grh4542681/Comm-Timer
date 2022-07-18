@@ -66,7 +66,7 @@ RuleDuration::GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& accuracy
 {
     std::ignore = reftime;
     if (!Valid(accuracy)) {
-        return std::make_tuple(Return(Return::E_RULE_INVALID), WheelScale());
+        return std::make_tuple(Return(Return::ESCHEDULE_RULE_INVALID), WheelScale());
     }
     return std::make_tuple(Return(Return::SUCCESS), WheelScale(_duration_nano.count() / accuracy.GetAccuracy().count()));
 }

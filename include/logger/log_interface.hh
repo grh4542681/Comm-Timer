@@ -9,7 +9,7 @@
 #include <ctime>
 #include <iomanip>
 
-#include "log_priority.h"
+#include "log_priority.hh"
 
 namespace xg::timer::log {
 

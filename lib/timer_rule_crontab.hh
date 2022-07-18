@@ -49,26 +49,20 @@ private:
             Value,
         };
     public:
-        FieldRule(Rule::RefTimePoint start_time, std::string rule, int max, int min);
+        FieldRule(std::string rule, int max, int min);
         FieldRule(FieldRule&& other);
         virtual ~FieldRule() { };
 
         void ParseRule();
         void ValidRule();
         bool Valid();
-        void Reset();
-        void SetLastTime(Rule::RefTimePoint last_time);
-        virtual std::tuple<Return, int> PeekNextValue();
-        virtual std::tuple<Return, int> PeekNextValue(int curr_value);
-        virtual std::tuple<Return, int> GetNextValue();
+        void SetLastTime(Rule::RefTimePoint&& last_time);
         virtual std::tuple<Return, int> GetNextValue(int curr_value);
         void Print();
     protected:
         bool _parsed;
         std::string _raw_rule;
-        Rule::RefTimePoint _start_time;
         Rule::RefTimePoint _last_time;
-        int _last_value;
         int _field_max_value;
         int _field_min_value;
 
@@ -78,77 +72,55 @@ private:
 
     class YearRule : public FieldRule {
     public:
-        YearRule(Rule::RefTimePoint start_time, std::string rule);
+        YearRule(std::string rule);
         YearRule(YearRule&& other);
         ~YearRule();
 
-        std::tuple<Return, int> PeekNextValue();
-        std::tuple<Return, int> PeekNextValue(int curr_value);
+        std::tuple<Return, int> GetNextValue(int curr_value);
     };
 
     class MonthRule : public FieldRule {
     public:
-        MonthRule(Rule::RefTimePoint start_time, std::string rule);
+        MonthRule(std::string rule);
         MonthRule(MonthRule&& other);
         ~MonthRule();
-
-        std::tuple<Return, int> PeekNextValue();
     };
 
     class DayOfMonthRule : public FieldRule {
     public:
-        DayOfMonthRule(Rule::RefTimePoint start_time, std::string rule);
+        DayOfMonthRule(std::string rule);
         DayOfMonthRule(DayOfMonthRule&& other);
         ~DayOfMonthRule();
 
-        std::tuple<Return, int> PeekNextValue();
-        std::tuple<Return, int> PeekNextValue(int curr_value);
-    private:
-        void valid_rule_();
+        std::tuple<Return, int> GetNextValue(int curr_value);
     };
 
     class DayOfWeekRule : public FieldRule {
     public:
-        DayOfWeekRule(Rule::RefTimePoint start_time, std::string rule);
+        DayOfWeekRule(std::string rule);
         DayOfWeekRule(DayOfWeekRule&& other);
         ~DayOfWeekRule();
-
-        std::tuple<Return, int> PeekNextValue();
-    private:
-        void valid_rule_();
     };
 
     class HourRule : public FieldRule {
     public:
-        HourRule(Rule::RefTimePoint start_time, std::string rule);
+        HourRule(std::string rule);
         HourRule(HourRule&& other);
         ~HourRule();
-
-        std::tuple<Return, int> PeekNextValue();
-    private:
-        void valid_rule_();
     };
 
     class MinuteRule : public FieldRule {
     public:
-        MinuteRule(Rule::RefTimePoint start_time, std::string rule);
+        MinuteRule(std::string rule);
         MinuteRule(MinuteRule&& other);
         ~MinuteRule();
-
-        std::tuple<Return, int> PeekNextValue();
-    private:
-        void valid_rule_();
     };
 
     class SecondRule : public FieldRule {
     public:
-        SecondRule(Rule::RefTimePoint start_time, std::string rule);
+        SecondRule(std::string rule);
         SecondRule(SecondRule&& other);
         ~SecondRule();
-
-        std::tuple<Return, int> PeekNextValue();
-    private:
-        void valid_rule_();
     };
 
 public:

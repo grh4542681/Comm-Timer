@@ -70,6 +70,7 @@ public:
         EMODULE = ErrCodeBaseLine,
 
         ESCHEDULE_RULE_INVALID,
+        ESCHEDULE_RULE_CONFLICT,
         ESCHEDULE_RULE_REACH_LIMIT,
     };
 public:
