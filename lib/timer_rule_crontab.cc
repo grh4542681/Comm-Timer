@@ -166,6 +166,63 @@ void RuleCrontab::FieldRule::SetLastTime(Rule::RefTimePoint&& last_time)
     _last_time = last_time;
 }
 
+bool RuleCrontab::FieldRule::CheckValue(int curr_value)
+{
+    if (!_parsed) return false;
+    for (auto rule : _rule_map) {
+        switch (rule.first) {
+            case RuleType::Any:
+                return true;
+            case RuleType::Frequency:
+                return true;
+            case RuleType::Range:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return false;
+                }
+                if (sm.size() != 3) {
+                    TIMER_RULE_ERROR("Not found right range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return false;
+                }
+                if (curr_value >= std::stoi(sm.str(1)) || curr_value <= std::stoi(sm.str(2))) {
+                    return true;
+                }
+            }
+            break;
+            case RuleType::FrequencyRange:
+            {
+                std::smatch sm;
+                if (!std::regex_search(rule.second, sm, std::regex("([0-9]+)\\-([0-9]+)\\/([0-9]+)"))) {
+                    TIMER_RULE_ERROR("Not found frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return false;
+                }
+                if (sm.size() != 4) {
+                    TIMER_RULE_ERROR("Not found right frequency & range in rule[" , rule.second, "]");
+                    _parsed = false;
+                    return false;
+                }
+                if (curr_value >= std::stoi(sm.str(1)) || curr_value <= std::stoi(sm.str(2))) {
+                    return true;
+                }
+            }
+            break;
+            case RuleType::Value:
+                if (curr_value == std::stoi(rule.second)) {
+                    return true;
+                }
+                break;
+            default:
+                return false;
+        }
+    }
+    return false;
+}
+
 std::tuple<Return, int> RuleCrontab::FieldRule::GetNextValue(int curr_value)
 {
     if (!_parsed) return {Return::ESCHEDULE_RULE_INVALID, -1};
@@ -565,14 +622,145 @@ RuleCrontab::GetNextExprieScale(RefTimePoint&& reftime, WheelAccuracy& accuracy)
     return std::make_tuple(Return(Return::ESCHEDULE_RULE_INVALID), WheelScale());
 }
 
+int RuleCrontab::get_field_value_(RefTimePoint&& time, Field&& field)
+{
+    auto curr_days = std::chrono::floor<std::chrono::days>(time);
+    std::chrono::hh_mm_ss curr_time(time - curr_days);
+    switch (field) {
+        case Year:
+            return ((int)std::chrono::year_month_day(curr_days).year());
+        case Month:
+            return ((unsigned int)std::chrono::year_month_day(curr_days).month());
+        case DayOfMonth:
+            return ((unsigned int)std::chrono::year_month_day(curr_days).day());
+        case DayOfWeek:
+            return std::chrono::year_month_weekday(curr_days).weekday().c_encoding();
+        case Hour:
+            return curr_time.hours().count();
+        case Minute:
+            return curr_time.minutes().count();
+        case Second:
+            return curr_time.seconds().count();
+        default:
+            return -1;
+    }
+}
+void RuleCrontab::set_field_value_(RefTimePoint&& time, Field&& field, int value)
+{
+    auto curr_days = std::chrono::floor<std::chrono::days>(time);
+    std::chrono::hh_mm_ss curr_time(time - curr_days);
+    switch (field) {
+        case Year:
+        {
+            int year;
+            if (value < (int)std::chrono::year_month_day(curr_days).year()) {
+                year = 0;
+            } else {
+                year = value - (int)std::chrono::year_month_day(curr_days).year();
+            }
+            time += std::chrono::years(year);
+        }
+        break;
+        case Month:
+        {
+            int month;
+            if ((unsigned int)value < (unsigned int)std::chrono::year_month_day(curr_days).month()) {
+                month = value + TIMER_MONTH_COUNT - (unsigned int)std::chrono::year_month_day(curr_days).month();
+            } else {
+                month = value - (unsigned int)std::chrono::year_month_day(curr_days).month();
+            }
+            time += std::chrono::months(month);
+        }
+        break;
+        case DayOfMonth:
+        {
+            int monthdays;
+            if ((unsigned int)value < (unsigned int)std::chrono::year_month_day(curr_days).day()) {
+                monthdays = value + TIMER_DAYOFMONTH_COUNT - (unsigned int)std::chrono::year_month_day(curr_days).day();
+            } else {
+                monthdays = value - (unsigned int)std::chrono::year_month_day(curr_days).day();
+            }
+            time += std::chrono::days(monthdays);
+        }
+        break;
+        case DayOfWeek:
+        {
+            int weekdays;
+            if ((unsigned int)value < std::chrono::year_month_weekday(curr_days).weekday().c_encoding()) {
+                weekdays = value + TIMER_DAYOFWEEK_COUNT - std::chrono::year_month_weekday(curr_days).weekday().c_encoding();
+            } else {
+                weekdays = value - std::chrono::year_month_weekday(curr_days).weekday().c_encoding();
+            }
+            time += std::chrono::days(weekdays);
+        }
+        break;
+        case Hour:
+        {
+            int hours;
+            if (value < curr_time.hours().count()) {
+                hours = value + TIMER_HOUR_COUNT - curr_time.hours().count();
+            } else {
+                hours = value - curr_time.hours().count();
+            }
+            time += std::chrono::hours(hours);
+        }
+        break;
+        case Minute:
+        {
+            int minutes;
+            if (value < curr_time.minutes().count()) {
+                minutes = value + TIMER_MINUTE_COUNT - curr_time.minutes().count();
+            } else {
+                minutes = value - curr_time.minutes().count();
+            }
+            time += std::chrono::minutes(minutes);
+        }
+        break;
+        case Second:
+        {
+            int seconds;
+            if (value < curr_time.seconds().count()) {
+                seconds = value + TIMER_SECOND_COUNT - curr_time.seconds().count();
+            } else {
+                seconds = value - curr_time.seconds().count();
+            }
+            time += std::chrono::seconds(seconds);
+        }
+        break;
+        default:
+            break;
+    }
+}
+
+Return RuleCrontab::gen_next_time_(RefTimePoint& next_time, Field&& field)
+{
+    TIMER_RULE_ERROR("--grh-- [", __LINE__,"]");
+    int field_value = get_field_value_(std::move(next_time), std::forward<Field>(field));
+    if (!_crontab_rule[field]->CheckValue(field_value)) {
+        _crontab_rule[field]->SetLastTime(std::move(next_time));
+        auto ret = _crontab_rule[field]->GetNextValue(field_value);
+
+        if (std::get<0>(ret) != Return::SUCCESS) {
+            return std::get<0>(ret);
+        }
+        set_field_value_(std::move(next_time), std::forward<Field>(field), std::get<1>(ret));
+    }
+    if (field > Field::Begin) {
+        return gen_next_time_(next_time, (Field)(field - 1));
+    }
+    return Return::SUCCESS;
+}
+
 std::tuple<Return, RuleCrontab::RefTimePoint>
 RuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
 {
+    RuleCrontab::RefTimePoint next_time = reftime;
+    gen_next_time_(next_time, Field::Second);
+#if 0
     auto curr_days = std::chrono::floor<std::chrono::days>(reftime);
     std::chrono::hh_mm_ss curr_time(reftime - curr_days);
 //    int curr_month = (unsigned int)std::chrono::year_month_day(curr_days).month();
 
-    RuleCrontab::RefTimePoint next_time;
     int second;
     int curr_second = curr_time.seconds().count();
     auto second_ret = _crontab_rule[Field::Second]->GetNextValue(curr_second);
@@ -659,6 +847,7 @@ RuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
             return {std::get<0>(weekday_ret), next_time};
         }
         int weekday_len = weekday - tmp_weekday;
+    TIMER_RULE_ERROR("--grh-- [", __LINE__,"] weekday [", weekday, "] len [", weekday_len, "]");
 
         auto monthday_ret = _crontab_rule[Field::DayOfMonth]->GetNextValue(tmp_monthday);
         if (std::get<0>(monthday_ret) == Return::SUCCESS) {
@@ -667,6 +856,7 @@ RuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
             return {std::get<0>(monthday_ret), next_time};
         }
         int monthday_len = monthday - tmp_monthday;
+    TIMER_RULE_ERROR("--grh-- [", __LINE__,"] monthday [", monthday, "] len [", monthday_len, "]");
         int day_len = weekday_len < monthday_len ? weekday_len : monthday_len;
         tmp_day_len += day_len;
 
@@ -681,10 +871,12 @@ RuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
             tmp_curr_month = tmp_curr_month % TIMER_MONTH_COUNT;
         }
     } while (tmp_day_len < hour / TIMER_HOUR_COUNT);
+    TIMER_RULE_ERROR("--grh-- [", __LINE__,"] tmp_day_len [", tmp_day_len, "]");
+    TIMER_RULE_ERROR("--grh-- [", __LINE__,"] hour [", hour % TIMER_HOUR_COUNT, "]");
     if (tmp_day_len % (hour / TIMER_HOUR_COUNT) == 0) {
         if ((curr_day + tmp_day_len) < GetMonthMaxDays(curr_year, curr_month)) {
             next_time = std::chrono::floor<std::chrono::days>(reftime)
-                        + std::chrono::days(curr_day + tmp_day_len)
+                        + std::chrono::days(tmp_day_len)
                         + std::chrono::hours(hour % TIMER_HOUR_COUNT)
                         + std::chrono::minutes(minute % TIMER_MINUTE_COUNT)
                         + std::chrono::seconds(second % TIMER_SECOND_COUNT);
@@ -730,7 +922,7 @@ RuleCrontab::GetNextExprieTime(RefTimePoint&& reftime)
             return {Return::SUCCESS, next_time};
         }
     }
-
+#endif
     return {Return::SUCCESS, next_time};
 }
 
@@ -774,7 +966,7 @@ void RuleCrontab::parse_rule_()
     auto words_end = std::sregex_iterator();
     int field_index = Field::Begin;
     for (std::sregex_iterator i = words_begin; i != words_end; ++i) {
-        if (field_index >= Field::End) {
+        if (field_index > Field::End) {
             _parsed = false;
             return;
         }

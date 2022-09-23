@@ -57,6 +57,7 @@ private:
         void ValidRule();
         bool Valid();
         void SetLastTime(Rule::RefTimePoint&& last_time);
+        bool CheckValue(int curr_value);
         virtual std::tuple<Return, int> GetNextValue(int curr_value);
         void Print();
     protected:
@@ -133,7 +134,7 @@ public:
         Hour,
         Minute,
         Second,
-        End,
+        End = Second,
     };
 public:
     RuleCrontab(std::string rule);
@@ -165,6 +166,9 @@ private:
 private:
     void parse_rule_();
     FieldRule* parse_field_rule_(int field, std::string rule);
+    int get_field_value_(RefTimePoint&& time, Field&& field);
+    void set_field_value_(RefTimePoint&& time, Field&& field, int value);
+    Return gen_next_time_(RefTimePoint& next_time, Field&& field);
 };
 
 }
